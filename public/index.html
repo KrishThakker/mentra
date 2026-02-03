@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        h1 {
+            margin-bottom: 30px;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 120px;
+        }
+        
+        #startButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #stopButton {
+            background-color: #f44336;
+            color: white;
+            display: none;
+        }
+        
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            min-height: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Recorder</h1>
+        
+        <div class="buttons">
+            <button id="startButton">Start</button>
+            <button id="stopButton">Stop</button>
+        </div>
+        
+        <p id="status">Ready to record</p>
+        
+        <div class="summary">
+            <h3>Summary</h3>
+            <p id="summary">Record a conversation to see a summary here</p>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startButton = document.getElementById('startButton');
+            const stopButton = document.getElementById('stopButton');
+            const statusElement = document.getElementById('status');
+            const summaryElement = document.getElementById('summary');
+            
+            // Get sessionId from URL query params
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionId = urlParams.get('sessionId');
+            
+            if (!sessionId) {
+                statusElement.textContent = 'Error: No session ID';
+                startButton.disabled = true;
+                return;
+            }
+            
+            startButton.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`/api/start?sessionId=${sessionId}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        startButton.style.display = 'none';
+                        stopButton.style.display = 'block';
+                        statusElement.textContent = 'Recording...';
+                        summaryElement.textContent = 'Recording in progress...';
+                    } else {
+                        const data = await response.json();
+                        statusElement.textContent = `Error: ${data.error || 'Failed to start recording'}`;
+                    }
+                } catch (error) {
+                    statusElement.textContent = 'Error: Could not connect to server';
+                }
+            });
+            
+            stopButton.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`/api/stop?sessionId=${sessionId}`, {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        startButton.style.display = 'block';
+                        stopButton.style.display = 'none';
+                        statusElement.textContent = 'Recording stopped';
+                        
+                        if (data.summary) {
+                            summaryElement.textContent = data.summary;
+                        } else {
+                            summaryElement.textContent = 'No summary generated';
+                        }
+                    } else {
+                        const data = await response.json();
+                        statusElement.textContent = `Error: ${data.error || 'Failed to stop recording'}`;
+                    }
+                } catch (error) {
+                    statusElement.textContent = 'Error: Could not connect to server';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
